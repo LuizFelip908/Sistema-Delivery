@@ -56,4 +56,20 @@ class FileStorage(private val dataDir: File) {
         val file = File(dataDir, "restaurante_")
         file.writeText(restaurant.toJson())
     }
+
+    fun saveClient(client: Client) {
+        val clientsFile = File(dataDir, "clientes.json")
+        val existing = loadAllClients().toMutableList()
+        if (existing.any { it.telefone == client.telefone }) {
+            throw IllegalArgumentException("Telefone já cadastrado")
+        }
+        existing.add(client)
+        clientsFile.writeText(existing.toJson())
+    }
+
+    fun loadAllClients(): List<Client> {
+        val file = File(dataDir, "clientes.json")
+        if (!file.exists()) return emptyList()
+        return emptyList()
+    }
 }
