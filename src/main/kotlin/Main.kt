@@ -48,6 +48,8 @@ data class Order(
 )
 
 class FileStorage(private val dataDir: File) {
+    private val ordersHeader = "id_pedido;data_hora;email_restaurante;nome_restaurante;telefone_cliente;nome_cliente;endereco_cliente;numero_item;quantidade;descricao_item;valor_unitario;valor_total_item;status"
+
     init {
         dataDir.mkdirs()
     }
@@ -91,14 +93,56 @@ class FileStorage(private val dataDir: File) {
     }
 
     private fun loadOrders(): List<Order> {
-        return emptyList()
+        val file = File(dataDir, "pedidos.csv")
+        if (!file.exists() || file.readText().isBlank()) return emptyList()
+        val lines = file.readLines().filter { it.isNotBlank() }
+        val dataLines = if (lines.firstOrNull() == ordersHeader) lines.drop(1) else lines
+        return dataLines.map { line ->
+            val values = line.split(";")
+            Order(
+                idPedido = values[0],
+                dataHora = values[1],
+                emailRestaurante = values[2],
+                nomeRestaurante = values[3],
+                telefoneCliente = values[4],
+                nomeCliente = values[5],
+                enderecoCliente = values[6],
+                numeroItem = values[7].toInt(),
+                quantidade = values[8].toInt(),
+                descricaoItem = values[9],
+                valorUnitario = values[10].toDouble(),
+                valorTotalItem = values[11].toDouble(),
+                status = values[12].toInt()
+            )
+        }
     }
 
-    private fun writeOrders(orders: List<Order>) {}
+    private fun writeOrders(orders: List<Order>) {
+        val file = File(dataDir, "pedidos.csv")
+        file.writeText(ordersHeader + "\n" + orders.joinToString(separator = "\n") { order ->
+            listOf(
+                order.idPedido,
+                order.dataHora,
+                order.emailRestaurante,
+                order.nomeRestaurante,
+                order.telefoneCliente,
+                order.nomeCliente,
+                order.enderecoCliente,
+                order.numeroItem.toString(),
+                order.quantidade.toString(),
+                order.descricaoItem,
+                order.valorUnitario.toString(),
+                order.valorTotalItem.toString(),
+                order.status.toString()
+            ).joinToString(separator = ";")
+        })
+    }
 
     fun loadAllClients(): List<Client> {
         val file = File(dataDir, "clientes.json")
         if (!file.exists()) return emptyList()
-        return emptyList()
+        return file.readText().trim().let { text ->
+            if (text.isBlank()) emptyList() else parseClients(text)
+        }
     }
 }
