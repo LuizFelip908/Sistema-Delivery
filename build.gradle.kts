@@ -31,6 +31,28 @@ application {
     mainClass.set("MainKt")
 }
 
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<JavaExec>("runRestaurant") {
+    group = "application"
+    description = "Inicia o App Restaurante"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("MainKt")
+    args("restaurant")
+    standardInput = System.`in`
+}
+
+tasks.register<JavaExec>("runClient") {
+    group = "application"
+    description = "Inicia o App Cliente"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("MainKt")
+    args("client")
+    standardInput = System.`in`
 }
