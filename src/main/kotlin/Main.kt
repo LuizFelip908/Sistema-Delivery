@@ -73,6 +73,23 @@ class FileStorage(private val dataDir: File) {
         writeOrders(orders)
     }
 
+    fun loadOrdersByRestaurant(email: String): List<Order> {
+        return loadOrders().filter { it.emailRestaurante == email }
+    }
+
+    fun loadOrdersByClient(telefone: String): List<Order> {
+        return loadOrders().filter { it.telefoneCliente == telefone }
+    }
+
+    fun updateOrderStatus(idPedido: String, newStatus: Int) {
+        val orders = loadOrders().toMutableList()
+        val idx = orders.indexOfFirst { it.idPedido == idPedido }
+        if (idx >= 0) {
+            orders[idx] = orders[idx].copy(status = newStatus)
+            writeOrders(orders)
+        }
+    }
+
     private fun loadOrders(): List<Order> {
         return emptyList()
     }
