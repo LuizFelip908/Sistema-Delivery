@@ -11,3 +11,38 @@ fun main(args: Array<String>) {
         else -> println("Uso: ./gradlew run --args='restaurant' ou --args='client'")
     }
 }
+
+data class Restaurant(
+    val nome: String,
+    val email: String,
+    val endereco: String,
+    val menu: MutableList<MenuItem> = mutableListOf()
+)
+
+data class MenuItem(
+    val numeroItem: Int,
+    val descricao: String,
+    val preco: Double
+)
+
+data class Client(
+    val nome: String,
+    val telefone: String,
+    val endereco: String
+)
+
+data class Order(
+    val idPedido: String,
+    val dataHora: String,
+    val emailRestaurante: String,
+    val nomeRestaurante: String,
+    val telefoneCliente: String,
+    val nomeCliente: String,
+    val enderecoCliente: String,
+    val numeroItem: Int,
+    val quantidade: Int,
+    val descricaoItem: String,
+    val valorUnitario: Double,
+    val valorTotalItem: Double,
+    val status: Int
+)
