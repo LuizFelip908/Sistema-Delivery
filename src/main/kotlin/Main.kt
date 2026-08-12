@@ -46,3 +46,9 @@ data class Order(
     val valorTotalItem: Double,
     val status: Int
 )
+
+class FileStorage(private val dataDir: File) {
+    init {
+        dataDir.mkdirs()
+    }
+}
