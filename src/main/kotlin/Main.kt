@@ -6,8 +6,8 @@ fun main(args: Array<String>) {
     dataDir.mkdirs()
 
     when (mode) {
-        "restaurant" -> println("Modo restaurante")
-        "client" -> println("Modo cliente")
+        "restaurant" -> RestaurantCli(dataDir).start()
+        "client" -> ClientCli(dataDir).start()
         else -> println("Uso: ./gradlew run --args='restaurant' ou --args='client'")
     }
 }
@@ -143,6 +143,148 @@ class FileStorage(private val dataDir: File) {
         if (!file.exists()) return emptyList()
         return file.readText().trim().let { text ->
             if (text.isBlank()) emptyList() else parseClients(text)
+        }
+    }
+
+    private fun parseRestaurant(file: File): Restaurant? {
+        val text = file.readText()
+        if (!text.contains("\"menu\"") || !text.contains("\"email\"")) return null
+        val email = Regex("\"email\":\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1) ?: ""
+        val nome = Regex("\"nome\":\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1) ?: ""
+        val endereco = Regex("\"endereco\":\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1) ?: ""
+        val menuItems = Regex("\"numero_item\":\s*(\\d+),\s*\"descricao\":\s*\"([^\"]+)\",\s*\"preco\":\s*(\\d+(?:\\.\\d+)?)")
+            .findAll(text)
+            .map {
+                MenuItem(
+                    numeroItem = it.groupValues[1].toInt(),
+                    descricao = it.groupValues[2],
+                    preco = it.groupValues[3].toDouble()
+                )
+            }.toList()
+        return Restaurant(nome, email, endereco, menuItems.toMutableList())
+    }
+
+    private fun parseClients(text: String): List<Client> {
+        val clientes = mutableListOf<Client>()
+        val regexNome = Regex("\"nome\":\s*\"([^\"]+)\"")
+        val regexTelefone = Regex("\"telefone\":\s*\"([^\"]+)\"")
+        val regexEndereco = Regex("\"endereco\":\s*\"([^\"]+)\"")
+        val names = regexNome.findAll(text).map { it.groupValues[1] }.toList()
+        val phones = regexTelefone.findAll(text).map { it.groupValues[1] }.toList()
+        val addresses = regexEndereco.findAll(text).map { it.groupValues[1] }.toList()
+        for (i in names.indices) {
+            clientes.add(Client(names[i], phones[i], addresses[i]))
+        }
+        return clientes
+    }
+
+    private fun sanitizeFileName(value: String) = value.replace("@", "_").replace(".", "_")
+}
+
+private fun Restaurant.toJson(): String {
+    val items = menu.joinToString(separator = ",") { item ->
+        "{\"numero_item\":${item.numeroItem},\"descricao\":\"${item.descricao}\",\"preco\":${item.preco}}"
+    }
+    return "{\"nome\":\"$nome\",\"email\":\"$email\",\"endereco\":\"$endereco\",\"menu\":[${items}] }"
+}
+
+private fun List<Client>.toJson(): String {
+    return joinToString(prefix = "[", postfix = "]") { client ->
+        "{\"nome\":\"${client.nome}\",\"telefone\":\"${client.telefone}\",\"endereco\":\"${client.endereco}\"}"
+    }
+}
+
+class RestaurantCli(private val dataDir: File) {
+    private val storage = FileStorage(dataDir)
+
+    fun start() {
+        while (true) {
+            println("\n[1] Entrar como Restaurante Existente")
+            println("[2] Novo Cadastro")
+            print("Escolha: ")
+            when (readLine()?.trim()) {
+                "1" -> loginRestaurant()
+                "2" -> registerRestaurant()
+                else -> println("Opcao invalida")
+            }
+        }
+    }
+
+    private fun loginRestaurant() {
+        print("E-mail: ")
+        val email = readLine()?.trim() ?: ""
+        val restaurant = storage.loadRestaurant(email)
+        if (restaurant != null) {
+            println("Bem-vindo, ${restaurant.nome}")
+            showRestaurantMenu(restaurant)
+        } else {
+            println("Restaurante nao encontrado")
+        }
+    }
+
+    private fun registerRestaurant() {
+        print("Nome: ")
+        val nome = readLine()?.trim() ?: ""
+        print("E-mail: ")
+        val email = readLine()?.trim() ?: ""
+        print("Endereco: ")
+        val endereco = readLine()?.trim() ?: ""
+        val restaurant = Restaurant(nome, email, endereco)
+        storage.saveRestaurant(restaurant)
+        println("Restaurante cadastrado com sucesso")
+    }
+
+    private fun showRestaurantMenu(restaurant: Restaurant) {
+        while (true) {
+            println("\n[1] Ver cardápio")
+            println("[2] Adicionar item")
+            println("[3] Remover item")
+            println("[4] Ver pedidos")
+            println("[5] Sair")
+            print("Escolha: ")
+            when (readLine()?.trim()) {
+                "1" -> restaurant.menu.forEach { println("${it.numeroItem} - ${it.descricao} R$${it.preco}") }
+                "2" -> addMenuItem(restaurant)
+                "3" -> removeMenuItem(restaurant)
+                "4" -> showOrders(restaurant)
+                "5" -> return
+                else -> println("Opcao invalida")
+            }
+        }
+    }
+
+    private fun addMenuItem(restaurant: Restaurant) {
+        print("Numero do item: ")
+        val numero = readLine()?.toIntOrNull() ?: return
+        print("Descricao: ")
+        val descricao = readLine()?.trim() ?: ""
+        print("Preco: ")
+        val preco = readLine()?.toDoubleOrNull() ?: return
+        restaurant.menu.add(MenuItem(numero, descricao, preco))
+        storage.updateRestaurant(restaurant)
+        println("Item adicionado")
+    }
+
+    private fun removeMenuItem(restaurant: Restaurant) {
+        print("Numero do item para remover: ")
+        val numero = readLine()?.toIntOrNull() ?: return
+        restaurant.menu.removeIf { it.numeroItem == numero }
+        storage.updateRestaurant(restaurant)
+        println("Item removido")
+    }
+
+    private fun showOrders(restaurant: Restaurant) {
+        val orders = storage.loadOrdersByRestaurant(restaurant.email)
+        if (orders.isEmpty()) {
+            println("Nenhum pedido encontrado")
+            return
+        }
+        orders.forEach { println("${it.idPedido}: ${it.descricaoItem} x${it.quantidade} - status ${it.status}") }
+        print("Id do pedido para atualizar status ou ENTER para voltar: ")
+        val option = readLine()?.trim()
+        if (!option.isNullOrBlank()) {
+            storage.updateOrderStatus(option, 1)
+            println("Status atualizado")
         }
     }
 }
