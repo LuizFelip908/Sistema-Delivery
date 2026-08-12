@@ -67,6 +67,18 @@ class FileStorage(private val dataDir: File) {
         clientsFile.writeText(existing.toJson())
     }
 
+    fun appendOrder(order: Order) {
+        val orders = loadOrders().toMutableList()
+        orders.add(order)
+        writeOrders(orders)
+    }
+
+    private fun loadOrders(): List<Order> {
+        return emptyList()
+    }
+
+    private fun writeOrders(orders: List<Order>) {}
+
     fun loadAllClients(): List<Client> {
         val file = File(dataDir, "clientes.json")
         if (!file.exists()) return emptyList()
