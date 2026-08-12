@@ -51,4 +51,9 @@ class FileStorage(private val dataDir: File) {
     init {
         dataDir.mkdirs()
     }
+
+    fun saveRestaurant(restaurant: Restaurant) {
+        val file = File(dataDir, "restaurante_")
+        file.writeText(restaurant.toJson())
+    }
 }
