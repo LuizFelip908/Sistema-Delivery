@@ -146,6 +146,18 @@ class FileStorage(private val dataDir: File) {
         }
     }
 
+    fun loadRestaurant(email: String): Restaurant? {
+        val files = dataDir.listFiles { f -> f.name.startsWith("restaurante_") && f.name.endsWith(".json") } ?: emptyArray()
+        return files.firstOrNull { file ->
+            val content = file.readText()
+            content.contains("\"email\":\"$email\"")
+        }?.let { parseRestaurant(it) }
+    }
+
+    fun updateRestaurant(restaurant: Restaurant) {
+        saveRestaurant(restaurant)
+    }
+
     private fun parseRestaurant(file: File): Restaurant? {
         val text = file.readText()
         if (!text.contains("\"menu\"") || !text.contains("\"email\"")) return null
@@ -288,3 +300,5 @@ class RestaurantCli(private val dataDir: File) {
         }
     }
 }
+
+tag++
